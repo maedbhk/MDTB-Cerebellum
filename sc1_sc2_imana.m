@@ -2163,6 +2163,15 @@ switch(what)
                         r{i}.weight=vertcat(r{i}.weight,r{i+idx}.weight);
                         R{i}=r{i};
                     end
+                case 'frontal_regions'
+                    load('regions_desikan.mat');
+                    idx=[4,13,15,28,29,33];
+                    for i=1:length(idx),
+                        F{i}=R{idx(i)};
+                    end
+                    clear R
+                    R=F;
+                case 'hippocampus'
                 case 'yeo',
                     for h=regSide, % loop over hemispheres
                         % define Yeo networks as regions
@@ -2605,6 +2614,9 @@ switch(what)
         spm_imcalc(nam,'cerebellarGreySUIT.nii','mean(X)',opt);
         
         fprintf('averaged cerebellar grey mask in SUIT space has been computed \n')
+    case 'PREP:avrgMask_cereb_corr'          % Correct the cerebellar mask - remove brainstem
+        cd(fullfile(studyDir{1},suitDir,'anatomicals'));
+        spm_imcalc({'cerebellarGreySUIT_corrected.nii','brainstem.nii'},'cerebellarGreySUIT_noBrainstem.nii','(i1-i2)>0');%
     case 'PREP:cereb:suit_betas'             % STEP 11.4: Reslice univar pre-whitened betas into suit space
         sn=varargin{1};
         study=varargin{2};
@@ -2622,7 +2634,7 @@ switch(what)
             X=spm_read_vols(Vi);
             indx=find(X>0);
             
-            %             make volume
+            % make volume
             for b=1:size(B{1}.betasUW,1),
                 Yy=zeros(1,Vi.dim(1)*Vi.dim(2)*Vi.dim(3));
                 Yy(1,indx)=B{1}.betasUW(b,:);
@@ -2981,9 +2993,9 @@ switch(what)
                     S.TN   = Y.TN(indx & Y.run==r); % get condNames
                     X=indicatorMatrix('identity',Y.cond(indx,:));
                     S.data = pinv(X)*Y.data(indx,:);
-                    S.data = bsxfun(@minus,S.data,nanmean(S.data)); % remove mean within each session
                     R=struct('sess',sess,'cond',restCond(study),'SN',sn(s),'study',study,'TN','rest','data',zeros(1,size(S.data,2))); % add rest
                     S=addstruct(S,R);
+                    S.data = bsxfun(@minus,S.data,nanmean(S.data)); % remove mean within each session
                     T=addstruct(T,S);
                 end;
                 if strcmp(type,'cereb'),
@@ -3379,7 +3391,7 @@ switch(what)
                 switch metric,
                     case 'RT'
                         figure()
-                        lineplot(A.runNum,A.rt,'split',A.trialType,'leg', {'long', 'short'},'subset',A.respMade==1);
+                        lineplot(A.runNum,A.rt,'split',A.trialType,'leg', {'long', 'short'},'subset',A.respMade==1,'CAT',CAT);
                         xlabel('Run');
                         ylabel('Reaction Time');
                     case 'accuracy'
@@ -3493,7 +3505,8 @@ switch(what)
                 switch metric,
                     case 'RT',
                         figure()
-                        lineplot(A.runNum, A.rt, 'split', A.trialType,'leg', {'meaningful','not meaningful'}, 'subset',A.respMade==1);
+                        %                         lineplot(A.runNum, A.rt, 'split', A.trialType,'leg', {'meaningful','not meaningful'}, 'subset',A.respMade==1,'CAT',CAT);
+                        lineplot(A.runNum,A.rt,'split',A.condition,'leg',{'prediction','violation','scrambled'},'subset',A.respMade==1, 'subset',A.runNum>13,'CAT',CAT);
                         xlabel('Run')
                         ylabel('Reaction Time')
                         title(main)
